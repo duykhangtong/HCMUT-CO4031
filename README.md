@@ -47,3 +47,24 @@ This dataset includes data about the sellers that fulfilled orders made at Olist
 ## Category Name Translation
 
 Translates the product_category_name to english
+
+## Streamlit Dashboard Analytics
+
+To view the interactive BI Dashboard and OLAP (Online Analytical Processing) analytics:
+
+1. **Install dependencies**:
+   Make sure you have the python environment setup, and then run:
+   ```bash
+   pip install -r requirements.txt
+   ```
+
+2. **Run the Dashboard Application**:
+   Navigate to the project root folder and execute:
+   ```bash
+   streamlit run dashboard/app.py
+   ```
+   *Note: If the `streamlit` command is not recognized, you can run:*
+   ```bash
+   python -m streamlit run dashboard/app.py
+   ```
+   The dashboard will automatically open in your default browser at `http://localhost:8501`.

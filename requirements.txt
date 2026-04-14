@@ -3,3 +3,7 @@ sqlalchemy
 pyodbc
 python-dotenv
 numpy
+
+streamlit
+plotly
+pandas
