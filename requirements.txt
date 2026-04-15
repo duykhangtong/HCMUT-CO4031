@@ -3,3 +3,9 @@ sqlalchemy
 pyodbc
 python-dotenv
 numpy
+
+scikit-learn
+matplotlib
+seaborn
+joblib
+streamlit
