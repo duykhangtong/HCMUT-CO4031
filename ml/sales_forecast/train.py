@@ -64,7 +64,7 @@ print(f"   -> Thu thập được {len(data)} chu kỳ bán hàng (Tháng/Ngành
 # 2. XÁC ĐỊNH FEATURE VÀ TARGET
 # Mục tiêu: Dự đoán số lượng bán ra (total_sales_volume)
 target_col = 'total_sales_volume'
-features = ['category_name_english', 'year', 'month', 'avg_price', 'avg_freight']
+features = ['category_name_english', 'month', 'avg_price', 'avg_freight']
 
 X = data[features]
 y = data[target_col]
@@ -77,7 +77,7 @@ X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_
 print("3. Khởi tạo Scikit-learn Pipeline (Regression)...")
 
 # Số hóa các cột dữ liệu
-num_features = ['year', 'month', 'avg_price', 'avg_freight']
+num_features = ['month', 'avg_price', 'avg_freight']
 cat_features = ['category_name_english']
 
 preprocessor = ColumnTransformer(
@@ -144,7 +144,16 @@ plt.tight_layout()
 plt.savefig(os.path.join(RESULTS_DIR, "trend_feature_importance.png"))
 plt.close()
 
-# 8. LƯU MÔ HÌNH
-print("7. Đang lưu mô hình dự báo...")
+# 8. LƯU MÔ HÌNH VÀ THỐNG KÊ NGÀNH HÀNG CƠ BẢN
+print("7. Đang lưu mô hình dự báo và dữ liệu khung giá ngành hàng...")
+
+# Trích xuất mức giá, cước phí trung bình lịch sử của tất cả category để giả lập cho tương lai
+category_stats = data.groupby('category_name_english').agg({
+    'avg_price': 'mean',
+    'avg_freight': 'mean'
+}).reset_index()
+
 joblib.dump(pipeline, os.path.join(BASE_DIR, "ml", "sales_forecast", "models", "trend_regressor.joblib"))
-print("=> Xong! Đã lưu model `trend_regressor.joblib` và 2 ảnh báo cáo trong `ml/results/`")
+joblib.dump(category_stats, os.path.join(BASE_DIR, "ml", "sales_forecast", "models", "category_stats.joblib"))
+
+print("=> Xong! Đã lưu model `trend_regressor.joblib`, `category_stats.joblib` và 2 ảnh báo cáo trong `ml/results/`")

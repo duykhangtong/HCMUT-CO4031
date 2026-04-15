@@ -170,48 +170,75 @@ elif menu == "2. Phân loại khách hàng (RFM)":
             st.caption("(Chưa tìm thấy file báo cáo. Vui lòng Train mô hình Clustering)")
 
 elif menu == "3. Dự báo xu hướng bán hàng":
-    st.title("Sales Trend Forecast (Random Forest Regression)")
-    st.markdown("Mục đích: Dự báo một ngành hàng / danh mục sẽ tiêu thụ bao nhiêu cái (Volume) để ra phương án quản lý kho.")
+    st.title("Top Ranking Sales Forecast (Dự báo Bảng xếp hạng Ngành hàng)")
+    st.markdown("Mục đích: AI tự động phân tích thị trường để tìm ra **Top các Nhóm hàng hóa sẽ BÁN CHẠY NHẤT** trong một năm (ví dụ 2022, 2023) để hỗ trợ Chiến lược nhập kho, xả hàng.")
 
     @st.cache_resource
     def load_reg_model():
+        # Added comment to force Streamlit cache invalidation
+        # Model no longer expects the 'year' column
         model_path = os.path.join(BASE_DIR, "ml", "sales_forecast", "models", "trend_regressor.joblib")
-        if os.path.exists(model_path):
-            return joblib.load(model_path)
-        return None
+        stats_path = os.path.join(BASE_DIR, "ml", "sales_forecast", "models", "category_stats.joblib")
+        if os.path.exists(model_path) and os.path.exists(stats_path):
+            return joblib.load(model_path), joblib.load(stats_path)
+        
+        return None, None
 
-    model = load_reg_model()
+    # Clear cache automatically once to ensure the new model without year is loaded
+    st.cache_resource.clear()
+    
+    model, cat_stats = load_reg_model()
 
-    if model is None:
-        st.error("Lỗi: Không tìm thấy model. Vui lòng chạy lệnh: python ml/sales_forecast/train.py")
+    if model is None or cat_stats is None:
+        st.error("Lỗi: Không tìm thấy model. Vui lòng chạy lệnh: `python ml/sales_forecast/train.py`")
     else:
-        st.sidebar.header("Tham số tính toán hồi quy")
-        category = st.sidebar.selectbox("Nhóm sản phẩm cần nhập (Tiếng Anh)", options=categories_list, index=default_category_idx)
-        year = st.sidebar.number_input("Năm dự báo", min_value=2015, max_value=2030, value=2018)
-        month = st.sidebar.slider("Tháng dự báo", min_value=1, max_value=12, value=10)
-        avg_price = st.sidebar.number_input("Giá trị trung bình ấn định ($)", min_value=0.0, max_value=5000.0, value=120.0)
-        avg_freight = st.sidebar.number_input("Phí giao hàng trung bình ($)", min_value=0.0, max_value=500.0, value=20.0)
+        st.sidebar.header("Bộ lọc Dự báo Bảng Xếp Hạng")
+        month_to_predict = st.sidebar.slider("Tháng muốn dự báo", min_value=1, max_value=12, value=11)
+        top_n = st.sidebar.slider("Chỉ hiển thị Top (N) sản phẩm", min_value=3, max_value=20, value=10)
 
-        st.write("### Nhập thông số tương lai để dự báo số bán")
-        submit_btn = st.button("Chạy Hồi quy Dự báo Doanh số", type="primary")
+        st.write(f"### Nhấn nút để kích hoạt AI Giả lập Doanh Số cho Tháng {month_to_predict}")
+        submit_btn = st.button(f"🚀 Xếp hạng Bán chạy Tháng {month_to_predict}", type="primary")
         
         if submit_btn:
-            input_df = pd.DataFrame([{
-                "category_name_english": category,
-                "year": year,
-                "month": month,
-                "avg_price": avg_price,
-                "avg_freight": avg_freight
-            }])
+            with st.spinner(f"Đang chạy thuật toán quét hơn 70 nhóm phân loại sản phẩm trong Tháng {month_to_predict}..."):
+                categories_list = cat_stats['category_name_english'].tolist()
+                
+                # Tạo lưới kết hợp: Cứ 1 cat -> ứng với 1 tháng chỉ định
+                grid_df = pd.DataFrame({'category_name_english': categories_list})
+                grid_df['month'] = month_to_predict
+                
+                # Bồi thêm giá và phí ship lịch sử của từng hàng để ném cho AI phân tích
+                grid_df = grid_df.merge(cat_stats, on='category_name_english', how='left')
+                
+                # Sắp xếp đúng thứ tự feature mà pipeline được học (BỎ YẾU TỐ NĂM)
+                X_pred = grid_df[['category_name_english', 'month', 'avg_price', 'avg_freight']]
+                
+                # Phát lệnh Predict: Tiên tri số tiêu thụ của tháng đó
+                grid_df['predicted_volume'] = model.predict(X_pred)
+                
+                # SORT Ranking luôn không cần groupby sum nữa vì chỉ có 1 tháng
+                monthly_forecast = grid_df.sort_values(by='predicted_volume', ascending=False).reset_index(drop=True)
+                monthly_forecast.index = monthly_forecast.index + 1 # Rank bắt đầu từ 1
+                monthly_forecast.rename(columns={'category_name_english': 'Danh mục Sản Phẩm', 'predicted_volume': 'Số lượng dự kiến bán (Volume)'}, inplace=True)
+                
+                # Lấy Top N user chọn rụng ra
+                top_results = monthly_forecast[['Danh mục Sản Phẩm', 'Số lượng dự kiến bán (Volume)']].head(top_n)
             
-            with st.spinner("Đang tính toán hồi quy..."):
-                prediction = model.predict(input_df)[0]
+            st.success(f"Hoàn tất Bảng xếp hạng Top {top_n} trong Tháng {month_to_predict}!")
             
-            st.subheader("Kết quả Dự báo")
-            st.success(f"Dự báo lô hàng sẽ tiêu thụ khoảng: {int(round(prediction))} đơn hàng")
+            # --- 1. Hiển thị Bảng Dataframe ---
+            st.dataframe(
+                top_results.style.format({'Số lượng dự kiến bán (Volume)': "{:,.0f} đơn"}),
+                use_container_width=True
+            )
+            
+            # --- 2. Hiển thị Đồ thị tương tác ---
+            st.markdown("---")
+            st.write(f"#### Biểu đồ Hình dải: Cuộc đua Sức bán tháng {month_to_predict}")
+            st.bar_chart(top_results.set_index('Danh mục Sản Phẩm')['Số lượng dự kiến bán (Volume)'])
             
         st.markdown("---")
-        st.subheader("Đánh giá mô hình Regression")
+        st.subheader("Đánh giá mô hình Regression Lịch Sử (Evaluation Metrics)")
         try:
             img1 = Image.open(os.path.join(BASE_DIR, "ml", "sales_forecast", "results", "trend_actual_vs_predicted.png"))
             img2 = Image.open(os.path.join(BASE_DIR, "ml", "sales_forecast", "results", "trend_feature_importance.png"))
