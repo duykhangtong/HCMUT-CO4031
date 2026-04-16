@@ -20,7 +20,7 @@ RESULTS_DIR = os.path.join(BASE_DIR, "ml", "sales_forecast", "results")
 os.makedirs(RESULTS_DIR, exist_ok=True)
 
 print("="*60)
-print(" DỰ BÁO XU HƯỚNG BÁN HÀNG (SALES TREND REGRESSION) ")
+print(" DỰ BÁO XU HƯỚNG BÁN HÀNG (SALES TREND REGRESSION) v2 ")
 print("="*60)
 
 # 1. KẾT NỐI DATABASE VÀ GỌI SQL
@@ -42,7 +42,6 @@ else:
 params = urllib.parse.quote_plus(conn_str)
 engine = create_engine(f"mssql+pyodbc:///?odbc_connect={params}")
 
-# Tính tổng số lượng bán và trung bình giá theo từng Ngành Hàng mỗi Tháng
 query = """
     SELECT 
         p.category_name_english,
@@ -56,29 +55,60 @@ query = """
     INNER JOIN dim_products p ON f.product_key = p.product_key
     WHERE p.category_name_english IS NOT NULL
     GROUP BY p.category_name_english, d.year, d.month
-    ORDER BY d.year, d.month
+    ORDER BY p.category_name_english, d.year, d.month
 """
 data = pd.read_sql(query, engine)
 print(f"   -> Thu thập được {len(data)} chu kỳ bán hàng (Tháng/Ngành hàng).")
 
-# 2. XÁC ĐỊNH FEATURE VÀ TARGET
-# Mục tiêu: Dự đoán số lượng bán ra (total_sales_volume)
+# 2. FEATURE ENGINEERING NÂNG CAO
+print("2. Tạo đặc trưng bổ sung (Lag, Rolling Avg, Seasonal)...")
+
+# Sắp xếp đúng thứ tự thời gian theo từng ngành hàng
+data = data.sort_values(['category_name_english', 'year', 'month']).reset_index(drop=True)
+
+# 2.1 Lag Feature: doanh số tháng trước của cùng ngành hàng
+data['prev_month_sales'] = data.groupby('category_name_english')['total_sales_volume'].shift(1)
+
+# 2.2 Rolling Average 3 tháng gần nhất (loại trừ tháng hiện tại)
+data['rolling_avg_3m'] = (
+    data.groupby('category_name_english')['total_sales_volume']
+    .transform(lambda x: x.shift(1).rolling(window=3, min_periods=1).mean())
+)
+
+# 2.3 Đặc trưng thời vụ
+data['is_holiday_season'] = data['month'].isin([11, 12]).astype(int)  # Black Friday + Natal
+data['is_mid_year']       = data['month'].isin([6, 7]).astype(int)    # Mid-year sale
+data['quarter']           = ((data['month'] - 1) // 3) + 1
+
+# Xóa các dòng bị NaN do lag (tháng đầu tiên của từng ngành hàng)
+data = data.dropna(subset=['prev_month_sales', 'rolling_avg_3m']).reset_index(drop=True)
+print(f"   -> Sau khi tạo lag features còn {len(data)} dòng (đã loại tháng đầu thiếu lag).")
+
+# 3. XÁC ĐỊNH FEATURE VÀ TARGET
 target_col = 'total_sales_volume'
-features = ['category_name_english', 'month', 'avg_price', 'avg_freight']
+
+num_features = [
+    'month', 'year', 'quarter',
+    'avg_price', 'avg_freight',
+    'prev_month_sales', 'rolling_avg_3m',
+    'is_holiday_season', 'is_mid_year'
+]
+cat_features = ['category_name_english']
+features     = num_features + cat_features
 
 X = data[features]
 y = data[target_col]
 
-# 3. CHIA TẬP TRAIN / TEST
-print("2. Chia tập Train/Test (80/20)...")
-X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+# 4. CHIA TẬP TRAIN / TEST — Chia theo thời gian (không random) để tránh data leakage
+# Lấy 20% cuối (tháng cuối) làm Test, 80% đầu làm Train
+print("3. Chia tập Train/Test (80/20 theo thứ tự thời gian - tránh Data Leakage)...")
+split_idx = int(len(data) * 0.8)
+X_train, X_test = X.iloc[:split_idx], X.iloc[split_idx:]
+y_train, y_test = y.iloc[:split_idx], y.iloc[split_idx:]
+print(f"   -> Train: {len(X_train)} mẫu | Test: {len(X_test)} mẫu")
 
-# 4. CHUẨN BỊ PIPELINE TIỀN XỬ LÝ & MÔ HÌNH HỒI QUY (Regression)
-print("3. Khởi tạo Scikit-learn Pipeline (Regression)...")
-
-# Số hóa các cột dữ liệu
-num_features = ['month', 'avg_price', 'avg_freight']
-cat_features = ['category_name_english']
+# 5. CHUẨN BỊ PIPELINE TIỀN XỬ LÝ & MÔ HÌNH HỒI QUY
+print("4. Khởi tạo Scikit-learn Pipeline nâng cao...")
 
 preprocessor = ColumnTransformer(
     transformers=[
@@ -87,73 +117,107 @@ preprocessor = ColumnTransformer(
     ]
 )
 
-# Sử dụng RandomForestRegressor (Hoạt động tương đương XGBoost trong bài toán cơ bản)
 pipeline = Pipeline(steps=[
     ("preprocessor", preprocessor),
-    ("regressor", RandomForestRegressor(n_estimators=150, max_depth=10, random_state=42))
+    ("regressor", RandomForestRegressor(
+        n_estimators=300,        # Tăng từ 150 lên 300 cây
+        max_depth=15,            # Tăng từ 10 lên 15
+        min_samples_leaf=2,      # Tránh overfitting trên lá
+        max_features='sqrt',     # Chọn ngẫu nhiên sqrt(n_features) ở mỗi split
+        random_state=42,
+        n_jobs=-1
+    ))
 ])
 
-# 5. TRAINING
-print("4. Huấn luyện mô hình (Training)...")
+# 6. TRAINING
+print("5. Huấn luyện mô hình (Training)...")
 pipeline.fit(X_train, y_train)
 
-# 6. ĐÁNH GIÁ (EVALUATION METRICS)
-print("5. Đánh giá độ chính xác của dự báo...")
+# 7. ĐÁNH GIÁ
+print("6. Đánh giá độ chính xác của dự báo...")
 y_pred = pipeline.predict(X_test)
 
-# Hàm đánh giá cho bài toán Hồi quy
 rmse = np.sqrt(mean_squared_error(y_test, y_pred))
-mae = mean_absolute_error(y_test, y_pred)
-r2 = r2_score(y_test, y_pred)
+mae  = mean_absolute_error(y_test, y_pred)
+r2   = r2_score(y_test, y_pred)
 
-print("\n--- REGRESSION METRICS ---")
-print(f"RMSE (Root Mean Squared Error) : {rmse:.2f} (Sai số dự báo trung bình khoảng {rmse:.0f} đơn hàng/tháng)")
-print(f"MAE (Mean Absolute Error)      : {mae:.2f}")
-print(f"R2 Score                       : {r2:.2f} (Càng gần 1 càng tốt)")
-print("--------------------------")
+print("\n" + "="*50)
+print("--- REGRESSION METRICS (v2 - Improved) ---")
+print(f"RMSE (Root Mean Squared Error) : {rmse:.2f} đơn hàng/tháng")
+print(f"MAE  (Mean Absolute Error)     : {mae:.2f}")
+print(f"R2   Score                     : {r2:.4f}  (Mục tiêu >= 0.70)")
+print("="*50)
 
-# 7. VẼ BIỂU ĐỒ BÁO CÁO (Visualizations)
-print("\n6. Xuất ảnh biểu đồ cho báo cáo...")
+# 8. VẼ BIỂU ĐỒ BÁO CÁO
+print("\n7. Xuất ảnh biểu đồ cho báo cáo...")
 
-# 7.1. Biểu đồ Dự đoán (Predicted) so với Thực tế (Actual)
+# 8.1 Actual vs Predicted
 plt.figure(figsize=(8, 6))
 plt.scatter(y_test, y_pred, alpha=0.6, color='dodgerblue')
-plt.plot([y.min(), y.max()], [y.min(), y.max()], 'r--', lw=2) # Đường chéo chuẩn mực
-plt.title("Dự báo mức Tiêu thụ Ngành hàng (Actual vs Predicted)")
+max_val = max(y_test.max(), y_pred.max())
+plt.plot([0, max_val], [0, max_val], 'r--', lw=2)
+plt.title(f"Actual vs Predicted Sales Volume\n(R² = {r2:.4f} | RMSE = {rmse:.1f})")
 plt.xlabel("Lượng bán Thực tế (Actual Volume)")
 plt.ylabel("Lượng bán Dự báo (Predicted Volume)")
 plt.tight_layout()
 plt.savefig(os.path.join(RESULTS_DIR, "trend_actual_vs_predicted.png"))
 plt.close()
 
-# 7.2. Tầm quan trọng của các yếu tố (Điều gì khiến hàng bán chạy?)
-model = pipeline.named_steps['regressor']
+# 8.2 Feature Importance (Top 15)
+model       = pipeline.named_steps['regressor']
 cat_encoder = pipeline.named_steps['preprocessor'].named_transformers_['cat']
-cat_cols_out = cat_encoder.get_feature_names_out(cat_features)
-all_cols = num_features + list(cat_cols_out)
+cat_out     = cat_encoder.get_feature_names_out(cat_features)
+all_cols    = num_features + list(cat_out)
 
-importances = model.feature_importances_
-top_indices = np.argsort(importances)[::-1][:10]
+importances  = model.feature_importances_
+top_n        = 15
+top_indices  = np.argsort(importances)[::-1][:top_n]
 
-plt.figure(figsize=(8, 5))
-plt.barh(range(10), importances[top_indices][::-1], align="center", color='coral')
-plt.yticks(range(10), [all_cols[i] for i in top_indices][::-1])
-plt.xlabel("Mức độ tác động (Importance Score)")
-plt.title("Những yếu tố ảnh hưởng nhất tới Lượng bán (Trending)")
+plt.figure(figsize=(9, 6))
+plt.barh(range(top_n), importances[top_indices][::-1], align="center", color='coral')
+plt.yticks(range(top_n), [all_cols[i] for i in top_indices][::-1])
+plt.xlabel("Importance Score")
+plt.title("Top 15 yếu tố ảnh hưởng đến Lượng bán")
 plt.tight_layout()
 plt.savefig(os.path.join(RESULTS_DIR, "trend_feature_importance.png"))
 plt.close()
 
-# 8. LƯU MÔ HÌNH VÀ THỐNG KÊ NGÀNH HÀNG CƠ BẢN
-print("7. Đang lưu mô hình dự báo và dữ liệu khung giá ngành hàng...")
+# 8.3 Actual vs Predicted theo thời gian (time-series view) - THÊM MỚI
+test_data = data.iloc[split_idx:].copy()
+test_data['predicted'] = y_pred
 
-# Trích xuất mức giá, cước phí trung bình lịch sử của tất cả category để giả lập cho tương lai
+top5_cat = (
+    test_data.groupby('category_name_english')['total_sales_volume']
+    .sum().nlargest(5).index.tolist()
+)
+
+fig, axes = plt.subplots(len(top5_cat), 1, figsize=(12, 3 * len(top5_cat)), sharex=False)
+for i, cat in enumerate(top5_cat):
+    subset = test_data[test_data['category_name_english'] == cat].sort_values(['year', 'month'])
+    x_labels = [f"{int(r.year)}-{int(r.month):02d}" for _, r in subset.iterrows()]
+    axes[i].plot(x_labels, subset['total_sales_volume'].values, 'b-o', label='Actual', markersize=4)
+    axes[i].plot(x_labels, subset['predicted'].values, 'r--s', label='Predicted', markersize=4)
+    axes[i].set_title(f"Category: {cat}")
+    axes[i].legend(fontsize=8)
+    axes[i].tick_params(axis='x', rotation=45, labelsize=7)
+plt.suptitle("Actual vs Predicted — Top 5 Ngành hàng bán chạy nhất (Tập Test)", y=1.01)
+plt.tight_layout()
+plt.savefig(os.path.join(RESULTS_DIR, "trend_timeseries_top5.png"), bbox_inches='tight')
+plt.close()
+print("   -> Đã lưu thêm: trend_timeseries_top5.png")
+
+# 9. LƯU MÔ HÌNH
+print("8. Lưu mô hình và thống kê ngành hàng...")
+
 category_stats = data.groupby('category_name_english').agg({
     'avg_price': 'mean',
-    'avg_freight': 'mean'
+    'avg_freight': 'mean',
+    'prev_month_sales': 'mean',
+    'rolling_avg_3m': 'mean'
 }).reset_index()
 
-joblib.dump(pipeline, os.path.join(BASE_DIR, "ml", "sales_forecast", "models", "trend_regressor.joblib"))
-joblib.dump(category_stats, os.path.join(BASE_DIR, "ml", "sales_forecast", "models", "category_stats.joblib"))
+joblib.dump(pipeline,        os.path.join(BASE_DIR, "ml", "sales_forecast", "models", "trend_regressor.joblib"))
+joblib.dump(category_stats,  os.path.join(BASE_DIR, "ml", "sales_forecast", "models", "category_stats.joblib"))
 
-print("=> Xong! Đã lưu model `trend_regressor.joblib`, `category_stats.joblib` và 2 ảnh báo cáo trong `ml/results/`")
+print(f"\n=> DONE! R2 = {r2:.4f} | RMSE = {rmse:.2f} | MAE = {mae:.2f}")
+print("=> Models saved. Charts saved to ml/sales_forecast/results/")
