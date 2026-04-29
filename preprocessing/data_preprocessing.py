@@ -3,7 +3,7 @@
   DATA PREPROCESSING PIPELINE
   Dataset  : Brazilian E-Commerce (Olist) — Kaggle
   Purpose  : Clean, transform, integrate & export data as star-schema CSVs
-             ready for MySQL Data Warehouse import  (see schema.sql).
+             ready for SQL Server Data Warehouse import  (see schema.sql).
   Output   : 7 CSV files  →  6 dimensions + 1 fact table
   Report   : preprocessing_report.md  (auto-generated)
 =============================================================================
