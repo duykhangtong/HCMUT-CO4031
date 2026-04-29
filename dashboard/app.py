@@ -12,7 +12,6 @@ RAW_DATA_DIR = os.path.join(BASE_DIR, 'dataset')
 
 @st.cache_data
 def load_data():
-    st.write("Loading datasets from data warehouse...")
     fact_order_items = pd.read_csv(os.path.join(DATA_DIR, 'fact_order_items.csv'))
     
     dim_date = pd.read_csv(os.path.join(DATA_DIR, 'dim_date.csv'))
