@@ -9,7 +9,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # --- CẤU HÌNH KẾT NỐI ---
-USE_CLOUD = True  # Đổi thành False nếu muốn nạp vào máy Local
+USE_CLOUD = False  # Đổi thành False nếu muốn nạp vào máy Local
 
 if USE_CLOUD:
     # Cấu hình Azure SQL Database (Lấy từ .env)
@@ -21,7 +21,7 @@ if USE_CLOUD:
     conn_str = f"DRIVER={{{DRIVER}}};SERVER={SERVER};DATABASE={DATABASE};UID={USERNAME};PWD={PASSWORD};"
 else:
     # Cấu hình Local SQL Server
-    SERVER = 'DESKTOP-B1A6SKD'
+    SERVER = 'LAPTOP-56MMLHPB'
     DATABASE = 'olist_dwh'
     conn_str = f"DRIVER={{ODBC Driver 17 for SQL Server}};SERVER={SERVER};DATABASE={DATABASE};Trusted_Connection=yes;"
 
