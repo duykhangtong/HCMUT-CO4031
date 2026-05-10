@@ -184,8 +184,7 @@ elif menu == "3. Dự báo xu hướng bán hàng":
         
         return None, None
 
-    # Clear cache automatically once to ensure the new model without year is loaded
-    st.cache_resource.clear()
+    # Clear cache to ensure latest model is loaded
     
     model, cat_stats = load_reg_model()
 
@@ -193,35 +192,48 @@ elif menu == "3. Dự báo xu hướng bán hàng":
         st.error("Lỗi: Không tìm thấy model. Vui lòng chạy lệnh: `python ml/sales_forecast/train.py`")
     else:
         st.sidebar.header("Bộ lọc Dự báo Bảng Xếp Hạng")
+        year_to_predict = st.sidebar.slider("Năm muốn dự báo", min_value=2017, max_value=2030, value=2018)
         month_to_predict = st.sidebar.slider("Tháng muốn dự báo", min_value=1, max_value=12, value=11)
         top_n = st.sidebar.slider("Chỉ hiển thị Top (N) sản phẩm", min_value=3, max_value=20, value=10)
 
-        st.write(f"### Nhấn nút để kích hoạt AI Giả lập Doanh Số cho Tháng {month_to_predict}")
-        submit_btn = st.button(f"🚀 Xếp hạng Bán chạy Tháng {month_to_predict}", type="primary")
+        st.write(f"### Nhấn nút để kích hoạt AI Giả lập Doanh Số cho Tháng {month_to_predict}/{year_to_predict}")
+        submit_btn = st.button(f"🚀 Xếp hạng Bán chạy Tháng {month_to_predict}/{year_to_predict}", type="primary")
         
         if submit_btn:
-            with st.spinner(f"Đang chạy thuật toán quét hơn 70 nhóm phân loại sản phẩm trong Tháng {month_to_predict}..."):
+            with st.spinner(f"Đang chạy thuật toán quét hơn 70 nhóm phân loại sản phẩm trong Tháng {month_to_predict}/{year_to_predict}..."):
                 categories_list = cat_stats['category_name_english'].tolist()
                 
                 # Tạo lưới kết hợp: Cứ 1 cat -> ứng với 1 tháng chỉ định
                 grid_df = pd.DataFrame({'category_name_english': categories_list})
                 grid_df['month'] = month_to_predict
+                grid_df['year']  = year_to_predict
                 
-                # Bồi thêm giá và phí ship lịch sử của từng hàng để ném cho AI phân tích
+                # Tính các features thời vụ từ tháng được chọn
+                grid_df['quarter']           = ((grid_df['month'] - 1) // 3) + 1
+                grid_df['is_holiday_season'] = grid_df['month'].isin([11, 12]).astype(int)
+                grid_df['is_mid_year']       = grid_df['month'].isin([6, 7]).astype(int)
+                
+                # Merge thống kê lịch sử (avg_price, avg_freight, prev_month_sales, rolling_avg_3m)
                 grid_df = grid_df.merge(cat_stats, on='category_name_english', how='left')
                 
-                # Sắp xếp đúng thứ tự feature mà pipeline được học (BỎ YẾU TỐ NĂM)
-                X_pred = grid_df[['category_name_english', 'month', 'avg_price', 'avg_freight']]
+                # Đưa vào đúng thứ tự feature mà pipeline được huấn luyện
+                X_pred = grid_df[[
+                    'month', 'year', 'quarter',
+                    'avg_price', 'avg_freight',
+                    'prev_month_sales', 'rolling_avg_3m',
+                    'is_holiday_season', 'is_mid_year',
+                    'category_name_english'
+                ]]
                 
-                # Phát lệnh Predict: Tiên tri số tiêu thụ của tháng đó
+                # Phát lệnh Predict
                 grid_df['predicted_volume'] = model.predict(X_pred)
                 
-                # SORT Ranking luôn không cần groupby sum nữa vì chỉ có 1 tháng
+                # Sắp xếp theo Ranking
                 monthly_forecast = grid_df.sort_values(by='predicted_volume', ascending=False).reset_index(drop=True)
-                monthly_forecast.index = monthly_forecast.index + 1 # Rank bắt đầu từ 1
+                monthly_forecast.index = monthly_forecast.index + 1
                 monthly_forecast.rename(columns={'category_name_english': 'Danh mục Sản Phẩm', 'predicted_volume': 'Số lượng dự kiến bán (Volume)'}, inplace=True)
                 
-                # Lấy Top N user chọn rụng ra
+                # Lấy Top N
                 top_results = monthly_forecast[['Danh mục Sản Phẩm', 'Số lượng dự kiến bán (Volume)']].head(top_n)
             
             st.success(f"Hoàn tất Bảng xếp hạng Top {top_n} trong Tháng {month_to_predict}!")
@@ -234,7 +246,7 @@ elif menu == "3. Dự báo xu hướng bán hàng":
             
             # --- 2. Hiển thị Đồ thị tương tác ---
             st.markdown("---")
-            st.write(f"#### Biểu đồ Hình dải: Cuộc đua Sức bán tháng {month_to_predict}")
+            st.write(f"#### Biểu đồ Hình dải: Cuộc đua Sức bán tháng {month_to_predict}/{year_to_predict}")
             st.bar_chart(top_results.set_index('Danh mục Sản Phẩm')['Số lượng dự kiến bán (Volume)'])
             
         st.markdown("---")
