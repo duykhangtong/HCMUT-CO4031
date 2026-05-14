@@ -210,8 +210,21 @@ elif menu == "3. Dự báo xu hướng bán hàng":
                 # Bồi thêm giá và phí ship lịch sử của từng hàng để ném cho AI phân tích
                 grid_df = grid_df.merge(cat_stats, on='category_name_english', how='left')
                 
-                # Sắp xếp đúng thứ tự feature mà pipeline được học (BỎ YẾU TỐ NĂM)
-                X_pred = grid_df[['category_name_english', 'month', 'avg_price', 'avg_freight']]
+                # Tính toán và thêm các feature còn thiếu mà preprocessor yêu cầu
+                grid_df['year'] = 2018  # Dùng năm 2018 làm baseline cho dataset Olist
+                grid_df['quarter'] = ((grid_df['month'] - 1) // 3) + 1
+                grid_df['is_holiday_season'] = grid_df['month'].isin([11, 12]).astype(int)
+                grid_df['is_mid_year'] = grid_df['month'].isin([6, 7]).astype(int)
+                
+                # Sắp xếp feature cho đúng (phải có đủ list features đã train)
+                features = [
+                    'month', 'year', 'quarter',
+                    'avg_price', 'avg_freight',
+                    'prev_month_sales', 'rolling_avg_3m',
+                    'is_holiday_season', 'is_mid_year',
+                    'category_name_english'
+                ]
+                X_pred = grid_df[features]
                 
                 # Phát lệnh Predict: Tiên tri số tiêu thụ của tháng đó
                 grid_df['predicted_volume'] = model.predict(X_pred)

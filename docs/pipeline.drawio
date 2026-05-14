@@ -1,0 +1,158 @@
+<mxGraphModel dx="1422" dy="762" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1654" pageHeight="1169" math="0" shadow="0">
+  <root>
+    <mxCell id="0" />
+    <mxCell id="1" parent="0" />
+
+    <!-- ===== TITLE ===== -->
+    <mxCell id="title" value="Olist E-Commerce — Data Pipeline Overview" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=20;fontStyle=1;fontColor=#1a1a2e;" vertex="1" parent="1">
+      <mxGeometry x="300" y="30" width="1050" height="40" as="geometry" />
+    </mxCell>
+
+    <!-- ===== BLOCK 1: DATA SOURCE ===== -->
+    <mxCell id="b1" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFF3CD;strokeColor=#FFC107;strokeWidth=2;" vertex="1" parent="1">
+      <mxGeometry x="60" y="280" width="180" height="200" as="geometry" />
+    </mxCell>
+    <mxCell id="b1_title" value="📦 DATA SOURCE" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=top;fontStyle=1;fontSize=11;fontColor=#856404;" vertex="1" parent="1">
+      <mxGeometry x="60" y="288" width="180" height="25" as="geometry" />
+    </mxCell>
+    <mxCell id="b1_icon" value="🛒 Kaggle" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;fontSize=16;fontStyle=1;fontColor=#664d03;" vertex="1" parent="1">
+      <mxGeometry x="60" y="320" width="180" height="40" as="geometry" />
+    </mxCell>
+    <mxCell id="b1_tech" value="9 CSV files&#xa;Olist Brazil Dataset&#xa;2016 – 2018" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;fontSize=10;fontColor=#664d03;" vertex="1" parent="1">
+      <mxGeometry x="60" y="365" width="180" height="60" as="geometry" />
+    </mxCell>
+    <mxCell id="b1_tool" value="🔧 Kaggle · CSV" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFC107;strokeColor=#856404;fontSize=9;fontColor=#1a1a2e;fontStyle=1;" vertex="1" parent="1">
+      <mxGeometry x="80" y="440" width="140" height="28" as="geometry" />
+    </mxCell>
+
+    <!-- ===== ARROW 1→2 ===== -->
+    <mxCell id="arr1" value="read_csv" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;strokeColor=#555555;strokeWidth=2;fontSize=9;fontColor=#555555;" edge="1" source="b1" target="b2" parent="1">
+      <mxGeometry relative="1" as="geometry" />
+    </mxCell>
+
+    <!-- ===== BLOCK 2: ETL / PREPROCESSING ===== -->
+    <mxCell id="b2" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#D4EDDA;strokeColor=#28A745;strokeWidth=2;" vertex="1" parent="1">
+      <mxGeometry x="310" y="240" width="200" height="240" as="geometry" />
+    </mxCell>
+    <mxCell id="b2_title" value="⚙️ ETL / PREPROCESSING" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=top;fontStyle=1;fontSize=11;fontColor=#155724;" vertex="1" parent="1">
+      <mxGeometry x="310" y="250" width="200" height="25" as="geometry" />
+    </mxCell>
+    <mxCell id="b2_items" value="• Xử lý Null / Outlier&#xa;• Parse Datetime&#xa;• Feature Engineering&#xa;  (lead_time, is_late,&#xa;   sentiment_label)&#xa;• Xây dựng Star Schema&#xa;• Export 7 CSV (Staging)" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;fontSize=10;fontColor=#155724;" vertex="1" parent="1">
+      <mxGeometry x="320" y="285" width="185" height="140" as="geometry" />
+    </mxCell>
+    <mxCell id="b2_tool" value="🔧 Python · Pandas · NumPy" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#28A745;strokeColor=#155724;fontSize=9;fontColor=#ffffff;fontStyle=1;" vertex="1" parent="1">
+      <mxGeometry x="330" y="445" width="165" height="28" as="geometry" />
+    </mxCell>
+
+    <!-- ===== ARROW 2→3 ===== -->
+    <mxCell id="arr2" value="7 CSV (Staging)" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;strokeColor=#555555;strokeWidth=2;fontSize=9;fontColor=#555555;" edge="1" source="b2" target="b3" parent="1">
+      <mxGeometry relative="1" as="geometry" />
+    </mxCell>
+
+    <!-- ===== BLOCK 3: DATA WAREHOUSE ===== -->
+    <mxCell id="b3" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#CCE5FF;strokeColor=#004085;strokeWidth=2;" vertex="1" parent="1">
+      <mxGeometry x="580" y="200" width="210" height="320" as="geometry" />
+    </mxCell>
+    <mxCell id="b3_title" value="🗄️ DATA WAREHOUSE" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=top;fontStyle=1;fontSize=11;fontColor=#004085;" vertex="1" parent="1">
+      <mxGeometry x="580" y="210" width="210" height="25" as="geometry" />
+    </mxCell>
+    <mxCell id="b3_schema" value="Star Schema&#xa;━━━━━━━━━━━━&#xa;fact_order_items&#xa;dim_customers&#xa;dim_products&#xa;dim_sellers&#xa;dim_date&#xa;dim_geography&#xa;dim_reviews&#xa;━━━━━━━━━━━━&#xa;109,886 fact rows" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;fontSize=10;fontColor=#004085;" vertex="1" parent="1">
+      <mxGeometry x="580" y="240" width="210" height="220" as="geometry" />
+    </mxCell>
+    <mxCell id="b3_tool" value="🔧 SQL Server · SQLAlchemy · pyodbc" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#004085;strokeColor=#002752;fontSize=9;fontColor=#ffffff;fontStyle=1;" vertex="1" parent="1">
+      <mxGeometry x="595" y="488" width="182" height="28" as="geometry" />
+    </mxCell>
+
+    <!-- ===== BLOCK 4: ML MODELS ===== -->
+    <!-- Container -->
+    <mxCell id="b4_bg" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#F3E8FF;strokeColor=#6F42C1;strokeWidth=2;dashed=0;" vertex="1" parent="1">
+      <mxGeometry x="865" y="130" width="230" height="460" as="geometry" />
+    </mxCell>
+    <mxCell id="b4_label" value="🤖 MACHINE LEARNING" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=top;fontStyle=1;fontSize=11;fontColor=#4B0082;" vertex="1" parent="1">
+      <mxGeometry x="865" y="140" width="230" height="25" as="geometry" />
+    </mxCell>
+
+    <!-- Model A -->
+    <mxCell id="m1" value="K-Means Clustering&#xa;RFM Segmentation&#xa;K=3 | Score=0.42" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E2C4FF;strokeColor=#6F42C1;fontSize=10;fontColor=#4B0082;fontStyle=0;" vertex="1" parent="1">
+      <mxGeometry x="885" y="175" width="190" height="90" as="geometry" />
+    </mxCell>
+
+    <!-- Model B -->
+    <mxCell id="m2" value="Random Forest Classifier&#xa;Satisfaction Prediction&#xa;AUC = 0.703" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E2C4FF;strokeColor=#6F42C1;fontSize=10;fontColor=#4B0082;fontStyle=0;" vertex="1" parent="1">
+      <mxGeometry x="885" y="295" width="190" height="90" as="geometry" />
+    </mxCell>
+
+    <!-- Model C -->
+    <mxCell id="m3" value="Random Forest Regressor&#xa;Sales Forecasting&#xa;R² = 0.88 | RMSE = 52" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E2C4FF;strokeColor=#6F42C1;fontSize=10;fontColor=#4B0082;fontStyle=0;" vertex="1" parent="1">
+      <mxGeometry x="885" y="415" width="190" height="90" as="geometry" />
+    </mxCell>
+
+    <mxCell id="b4_tool" value="🔧 Scikit-learn · Joblib" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#6F42C1;strokeColor=#4B0082;fontSize=9;fontColor=#ffffff;fontStyle=1;" vertex="1" parent="1">
+      <mxGeometry x="895" y="527" width="160" height="28" as="geometry" />
+    </mxCell>
+
+    <!-- ===== ARROWS DW → ML ===== -->
+    <mxCell id="arr3a" value="SQL JOIN" style="edgeStyle=orthogonalEdgeStyle;exitX=1;exitY=0.25;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;strokeColor=#6F42C1;strokeWidth=1.5;fontSize=9;fontColor=#6F42C1;" edge="1" source="b3" target="m1" parent="1">
+      <mxGeometry relative="1" as="geometry" />
+    </mxCell>
+    <mxCell id="arr3b" value="SQL JOIN" style="edgeStyle=orthogonalEdgeStyle;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;strokeColor=#6F42C1;strokeWidth=1.5;fontSize=9;fontColor=#6F42C1;" edge="1" source="b3" target="m2" parent="1">
+      <mxGeometry relative="1" as="geometry" />
+    </mxCell>
+    <mxCell id="arr3c" value="SQL JOIN" style="edgeStyle=orthogonalEdgeStyle;exitX=1;exitY=0.75;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;strokeColor=#6F42C1;strokeWidth=1.5;fontSize=9;fontColor=#6F42C1;" edge="1" source="b3" target="m3" parent="1">
+      <mxGeometry relative="1" as="geometry" />
+    </mxCell>
+
+    <!-- ===== BLOCK 5: DASHBOARD ===== -->
+    <mxCell id="b5" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#D1ECF1;strokeColor=#0C5460;strokeWidth=2;" vertex="1" parent="1">
+      <mxGeometry x="1170" y="200" width="210" height="320" as="geometry" />
+    </mxCell>
+    <mxCell id="b5_title" value="📊 DASHBOARD / APP" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=top;fontStyle=1;fontSize=11;fontColor=#0C5460;" vertex="1" parent="1">
+      <mxGeometry x="1170" y="210" width="210" height="25" as="geometry" />
+    </mxCell>
+    <mxCell id="b5_items" value="📈 BI Analytics&#xa;  · Doanh thu theo thời gian&#xa;  · Phân bố đơn theo vùng&#xa;  · OLAP Slice / Dice&#xa;&#xa;🤖 ML Predictions&#xa;  · Phân cụm KH (Scatter)&#xa;  · Dự báo hài lòng&#xa;  · Dự báo doanh số" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;fontSize=10;fontColor=#0C5460;" vertex="1" parent="1">
+      <mxGeometry x="1178" y="248" width="198" height="210" as="geometry" />
+    </mxCell>
+    <mxCell id="b5_tool" value="🔧 Streamlit · Plotly · Seaborn" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#0C5460;strokeColor=#062C33;fontSize=9;fontColor=#ffffff;fontStyle=1;" vertex="1" parent="1">
+      <mxGeometry x="1188" y="488" width="180" height="28" as="geometry" />
+    </mxCell>
+
+    <!-- ===== ARROWS ML → DASHBOARD ===== -->
+    <mxCell id="arr4a" value=".joblib" style="edgeStyle=orthogonalEdgeStyle;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.25;entryDx=0;entryDy=0;strokeColor=#0C5460;strokeWidth=1.5;fontSize=9;fontColor=#0C5460;" edge="1" source="m1" target="b5" parent="1">
+      <mxGeometry relative="1" as="geometry" />
+    </mxCell>
+    <mxCell id="arr4b" value=".joblib" style="edgeStyle=orthogonalEdgeStyle;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;strokeColor=#0C5460;strokeWidth=1.5;fontSize=9;fontColor=#0C5460;" edge="1" source="m2" target="b5" parent="1">
+      <mxGeometry relative="1" as="geometry" />
+    </mxCell>
+    <mxCell id="arr4c" value=".joblib" style="edgeStyle=orthogonalEdgeStyle;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.75;entryDx=0;entryDy=0;strokeColor=#0C5460;strokeWidth=1.5;fontSize=9;fontColor=#0C5460;" edge="1" source="m3" target="b5" parent="1">
+      <mxGeometry relative="1" as="geometry" />
+    </mxCell>
+
+    <!-- ===== BLOCK 6: END USER ===== -->
+    <mxCell id="b6" value="👤 Người dùng cuối&#xa;(Nhà quản lý / Analyst)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FDECEA;strokeColor=#C62828;strokeWidth=2;fontSize=11;fontColor=#B71C1C;fontStyle=1;" vertex="1" parent="1">
+      <mxGeometry x="1455" y="310" width="180" height="100" as="geometry" />
+    </mxCell>
+
+    <!-- ARROW Dashboard → User -->
+    <mxCell id="arr5" value="Web Browser&#xa;localhost:8501" style="edgeStyle=orthogonalEdgeStyle;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;strokeColor=#C62828;strokeWidth=2;fontSize=9;fontColor=#C62828;" edge="1" source="b5" target="b6" parent="1">
+      <mxGeometry relative="1" as="geometry" />
+    </mxCell>
+
+    <!-- ===== LAYER LABELS (bottom) ===== -->
+    <mxCell id="lbl1" value="Tầng 1" style="text;html=1;strokeColor=none;fillColor=none;align=center;fontSize=9;fontColor=#888888;fontStyle=2;" vertex="1" parent="1">
+      <mxGeometry x="90" y="570" width="130" height="20" as="geometry" />
+    </mxCell>
+    <mxCell id="lbl2" value="Tầng 2" style="text;html=1;strokeColor=none;fillColor=none;align=center;fontSize=9;fontColor=#888888;fontStyle=2;" vertex="1" parent="1">
+      <mxGeometry x="340" y="570" width="130" height="20" as="geometry" />
+    </mxCell>
+    <mxCell id="lbl3" value="Tầng 3" style="text;html=1;strokeColor=none;fillColor=none;align=center;fontSize=9;fontColor=#888888;fontStyle=2;" vertex="1" parent="1">
+      <mxGeometry x="610" y="570" width="130" height="20" as="geometry" />
+    </mxCell>
+    <mxCell id="lbl4" value="Tầng 4" style="text;html=1;strokeColor=none;fillColor=none;align=center;fontSize=9;fontColor=#888888;fontStyle=2;" vertex="1" parent="1">
+      <mxGeometry x="900" y="570" width="130" height="20" as="geometry" />
+    </mxCell>
+    <mxCell id="lbl5" value="Tầng 5" style="text;html=1;strokeColor=none;fillColor=none;align=center;fontSize=9;fontColor=#888888;fontStyle=2;" vertex="1" parent="1">
+      <mxGeometry x="1200" y="570" width="130" height="20" as="geometry" />
+    </mxCell>
+
+  </root>
+</mxGraphModel>
